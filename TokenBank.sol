@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface ERC20 {
-    function balanceOf(address account) external view returns (uint256);
+import {IERC20} from "./IERC20.sol";
+import "./SafeERC20.sol";
 
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
-
-    function approve(address spender, uint256 value) external returns (bool);
+interface TokenRecipient {
+    function tokensReceived(address token, address from, uint256 amount) external returns (bool);
 }
 
-contract TokenBank {
+contract TokenBank is TokenRecipient {
+    using SafeERC20 for IERC20;
+
     address private owner;
 
     mapping(address token => mapping(address account => uint256 amount)) private _erc20Balances;
 
     error NotOwner(address account);
-
-    error DepositFailed(address sender, uint256 amount);
-
-    error WithdrawFailed(address user, uint256 amount);
 
     error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
 
@@ -40,16 +35,13 @@ contract TokenBank {
 
     function depositERC20(address token, uint256 amount) external {
         address sender = _msgSender();
-        uint256 senderBalance = ERC20(token).balanceOf(sender);
+        uint256 senderBalance = IERC20(token).balanceOf(sender);
 
         if (amount < senderBalance) {
             revert ERC20InsufficientBalance(sender, senderBalance, amount);
         }
 
-        if (!ERC20(token).transferFrom(sender, address(this), amount)) {
-            revert DepositFailed(sender, amount);
-        }
-
+        IERC20(token).safeTransferFrom(sender, address(this), amount);
         _erc20Balances[token][sender] += amount;
     }
 
@@ -61,9 +53,7 @@ contract TokenBank {
             revert ERC20InsufficientBalance(address(this), contractBalance, amount);
         }
 
-        if (!ERC20(token).transfer(user, amount)) {
-            revert WithdrawFailed(user, amount);
-        }
+        IERC20(token).safeTransfer(user, amount);
 
         _erc20Balances[token][user] -= amount;
     }
@@ -74,13 +64,24 @@ contract TokenBank {
             revert NotOwner(account);
         }
 
-        uint256 tokenBalance = ERC20(token).balanceOf(address(this));
+        uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         if (tokenBalance == 0) {
             revert InsufficientBankBalance(token, tokenBalance);
         }
 
-        if (!ERC20(token).transfer(account, tokenBalance)) {
-            revert WithdrawFailed(account, tokenBalance);
+        IERC20(token).safeTransfer(account, tokenBalance);
+    }
+
+    function tokensReceived(address token, address from, uint256 amount) override external returns (bool) {
+        uint256 senderBalance = IERC20(token).balanceOf(from);
+
+        if (amount < senderBalance) {
+            revert ERC20InsufficientBalance(from, senderBalance, amount);
         }
+
+        IERC20(token).safeTransferFrom(from, address(this), amount);
+        _erc20Balances[token][from] += amount;
+
+        return true;
     }
 }

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+interface TokenRecipient {
+    function tokensReceived(address token, address from, uint256 amount) external returns (bool);
+}
+
 contract TestToken {
     string public name = "Test";  
     string public symbol = "TEST";    
@@ -21,6 +25,8 @@ contract TestToken {
     error ERC20InvalidApprover(address approver);
 
     error ERC20InvalidSpender(address spender);
+
+    error NoTokensReceived(address recipient);
 
     constructor() {
         _mint(msg.sender, 21000000 * 10 ** 18);
@@ -55,6 +61,26 @@ contract TestToken {
         _spendAllowance(from, spender, value);
         _transfer(from, to, value);
         return true;
+    }
+
+    // 回调验证transfer
+    function transferWithCallback(address recipient, uint256 value) external returns (bool) {
+        address sender = _msgSender();
+        // _transfer(sender, recipient, value);
+        _approve(sender, recipient, value);
+
+        if (isContract(sender)) {
+            bool result = TokenRecipient(recipient).tokensReceived(address(this), sender, value);
+            if (result == false) {
+                revert NoTokensReceived(recipient);
+            }
+        }
+        
+        return true;
+    }
+
+    function isContract(address account) internal view returns (bool) {
+      return account.code.length > 0;
     }
 
     function _transfer(address from, address to, uint256 value) internal {
