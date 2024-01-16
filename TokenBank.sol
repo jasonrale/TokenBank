@@ -5,7 +5,7 @@ import {IERC20} from "./IERC20.sol";
 import "./SafeERC20.sol";
 
 interface TokenRecipient {
-    function tokensReceived(address token, address from, uint256 amount) external returns (bool);
+    function tokensReceived(address sender, uint256 value, bytes memory data) external returns (bool);
 }
 
 contract TokenBank is TokenRecipient {
@@ -33,28 +33,15 @@ contract TokenBank is TokenRecipient {
         return _erc20Balances[token][account];
     }
 
-    function depositERC20(address token, uint256 amount) external {
+    function depositERC20(address token, uint256 amount) public {
         address sender = _msgSender();
-        uint256 senderBalance = IERC20(token).balanceOf(sender);
-
-        if (amount < senderBalance) {
-            revert ERC20InsufficientBalance(sender, senderBalance, amount);
-        }
-
         IERC20(token).safeTransferFrom(sender, address(this), amount);
         _erc20Balances[token][sender] += amount;
     }
 
     function withdraw(address token, uint256 amount) external {
         address user = _msgSender();
-        uint256 contractBalance = balanceOf(token, user);
-
-        if (amount < contractBalance) {
-            revert ERC20InsufficientBalance(address(this), contractBalance, amount);
-        }
-
         IERC20(token).safeTransfer(user, amount);
-
         _erc20Balances[token][user] -= amount;
     }
 
@@ -65,21 +52,11 @@ contract TokenBank is TokenRecipient {
         }
 
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-        if (tokenBalance == 0) {
-            revert InsufficientBankBalance(token, tokenBalance);
-        }
-
         IERC20(token).safeTransfer(account, tokenBalance);
     }
 
-    function tokensReceived(address token, address from, uint256 amount) override external returns (bool) {
-        uint256 senderBalance = IERC20(token).balanceOf(from);
-
-        if (amount < senderBalance) {
-            revert ERC20InsufficientBalance(from, senderBalance, amount);
-        }
-
-        _erc20Balances[token][from] += amount;
+    function tokensReceived(address sender, uint256 value, bytes memory data) override external returns (bool) {
+        _erc20Balances[msg.sender][sender] += value;
         return true;
     }
 }
