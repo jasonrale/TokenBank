@@ -66,8 +66,6 @@ contract TestToken {
     // 回调验证transfer
     function transferWithCallback(address recipient, uint256 value) external returns (bool) {
         address sender = _msgSender();
-        // _transfer(sender, recipient, value);
-        _approve(sender, recipient, value);
 
         if (isContract(sender)) {
             bool result = TokenRecipient(recipient).tokensReceived(address(this), sender, value);
@@ -76,6 +74,7 @@ contract TestToken {
             }
         }
         
+        _transfer(sender, recipient, value);
         return true;
     }
 

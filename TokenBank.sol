@@ -79,9 +79,7 @@ contract TokenBank is TokenRecipient {
             revert ERC20InsufficientBalance(from, senderBalance, amount);
         }
 
-        IERC20(token).safeTransferFrom(from, address(this), amount);
         _erc20Balances[token][from] += amount;
-
         return true;
     }
 }
