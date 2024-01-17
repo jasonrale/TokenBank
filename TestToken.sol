@@ -67,7 +67,7 @@ contract TestToken {
     function transferWithCallback(address recipient, uint256 value, bytes memory data) external returns (bool) {
         address sender = _msgSender();
 
-        if (isContract(sender)) {
+        if (isContract(recipient)) {
             bool result = TokenRecipient(recipient).tokensReceived(sender, value, data);
             if (result == false) {
                 revert NoTokensReceived(recipient);
