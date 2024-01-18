@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface TokenRecipient {
-    function tokensReceived(address sender, uint256 value, bytes memory data) external returns (bool);
+    function tokenReceived(address sender, uint256 value, bytes memory data) external returns (bool);
 }
 
 contract TestToken {
@@ -68,7 +68,7 @@ contract TestToken {
         address sender = _msgSender();
 
         if (isContract(recipient)) {
-            bool result = TokenRecipient(recipient).tokensReceived(sender, value, data);
+            bool result = TokenRecipient(recipient).tokenReceived(sender, value, data);
             if (result == false) {
                 revert NoTokensReceived(recipient);
             }

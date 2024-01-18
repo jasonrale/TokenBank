@@ -5,7 +5,7 @@ import {IERC20} from "./IERC20.sol";
 import "./SafeERC20.sol";
 
 interface TokenRecipient {
-    function tokensReceived(address sender, uint256 value, bytes memory data) external returns (bool);
+    function tokenReceived(address sender, uint256 value, bytes memory data) external returns (bool);
 }
 
 contract TokenBank is TokenRecipient {
@@ -55,7 +55,7 @@ contract TokenBank is TokenRecipient {
         IERC20(token).safeTransfer(account, tokenBalance);
     }
 
-    function tokensReceived(address sender, uint256 value, bytes memory data) override external returns (bool) {
+    function tokenReceived(address sender, uint256 value, bytes memory data) override external returns (bool) {
         _erc20Balances[msg.sender][sender] += value;
         return true;
     }
